@@ -4,8 +4,9 @@
 #   ccycloud-1.sbimf-azure.root.comops.site
 #   ccycloud-2.sbimf-azure.root.comops.site
 #   ccycloud-3.sbimf-azure.root.comops.site
-# Impala connects to the node the script is running on, so the Kerberos
-# service principal is impala/<that FQDN>. Set IMPALA_HOST to pick another.
+# Impala connects to ccycloud-2 with Kerberos and TLS. ccycloud-1 refuses
+# the client port. The CA is the Cloudera Manager agent certificate.
+# Set IMPALA_HOST or IMPALA_CA_CERT to override.
 #
 # The ticket matches the cluster check:
 #   kinit -kt /cdep/keytabs/systest.keytab systest
@@ -22,6 +23,9 @@ IMPALA_SERVICE="${IMPALA_SERVICE:-impala}"
 IMPALA_SHELL="${IMPALA_SHELL:-impala-shell}"
 DATA_ROOT="${DATA_ROOT:-/tmp/imei_synth}"
 CLUSTER_DOMAIN="${CLUSTER_DOMAIN:-sbimf-azure.root.comops.site}"
+IMPALA_HOST="${IMPALA_HOST:-ccycloud-2.${CLUSTER_DOMAIN}}"
+IMPALA_DATABASE="${IMPALA_DATABASE:-default}"
+IMPALA_CA_CERT="${IMPALA_CA_CERT:-/var/lib/cloudera-scm-agent/agent-cert/cm-auto-global_cacerts.pem}"
 CLUSTER_HOSTS=(
   "ccycloud-1.${CLUSTER_DOMAIN}"
   "ccycloud-2.${CLUSTER_DOMAIN}"
@@ -44,10 +48,11 @@ Environment:
   KEYTAB=${KEYTAB}
   PRINCIPAL=${PRINCIPAL}
   REALM=${REALM}
-  IMPALA_HOST   default: this node's FQDN, else ${CLUSTER_HOSTS[0]}
+  IMPALA_HOST=${IMPALA_HOST}
+  IMPALA_DATABASE=${IMPALA_DATABASE}
+  IMPALA_CA_CERT=${IMPALA_CA_CERT}
   Hosts: ${CLUSTER_HOSTS[*]}
   DATA_ROOT=${DATA_ROOT}
-  IMPALA_SSL=1  pass --ssl when the coordinator requires TLS
 EOF
 }
 
@@ -61,35 +66,16 @@ kinit_systest() {
   klist
 }
 
-impala_host() {
-  if [[ -n "${IMPALA_HOST:-}" ]]; then
-    printf '%s\n' "$IMPALA_HOST"
-    return
-  fi
-  local short fqdn host
-  short=$(hostname -s 2>/dev/null || hostname)
-  fqdn=$(hostname -f 2>/dev/null || true)
-  for host in "${CLUSTER_HOSTS[@]}"; do
-    if [[ "$fqdn" == "$host" || "$short" == "${host%%.*}" ]]; then
-      printf '%s\n' "$host"
-      return
-    fi
-  done
-  printf '%s\n' "${CLUSTER_HOSTS[0]}"
-}
-
 impala() {
-  local host
-  host=$(impala_host)
-  echo "Impala coordinator: ${host} (service ${IMPALA_SERVICE}/${host}@${REALM})"
+  echo "Impala coordinator: ${IMPALA_HOST} (service ${IMPALA_SERVICE}/${IMPALA_HOST}@${REALM})"
   local -a args=(
-    -i "$host"
+    -i "$IMPALA_HOST"
+    -d "$IMPALA_DATABASE"
     -k
     --kerberos_service_name="$IMPALA_SERVICE"
+    --ssl
+    --ca_cert="$IMPALA_CA_CERT"
   )
-  if [[ "${IMPALA_SSL:-0}" == "1" ]]; then
-    args+=(--ssl)
-  fi
   "$IMPALA_SHELL" "${args[@]}" "$@"
 }
 

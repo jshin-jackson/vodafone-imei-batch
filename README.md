@@ -88,7 +88,7 @@ Kerberos가 켜져 있습니다. 아래 세 노드 중 하나에서 `synthetic/i
 - `ccycloud-2.sbimf-azure.root.comops.site`
 - `ccycloud-3.sbimf-azure.root.comops.site`
 
-스크립트는 실행 중인 노드의 FQDN으로 Impala에 접속합니다. 서비스 프린시펄은 `impala/<그 호스트>`입니다. 다른 노드를 지정하려면 `IMPALA_HOST`를 넘깁니다.
+스크립트는 Impala 코디네이터 `ccycloud-2.sbimf-azure.root.comops.site`에 Kerberos와 TLS로 접속합니다. 서비스 프린시펄은 `impala/ccycloud-2.sbimf-azure.root.comops.site`이고, CA 인증서는 `/var/lib/cloudera-scm-agent/agent-cert/cm-auto-global_cacerts.pem`입니다. 다른 노드를 지정하려면 `IMPALA_HOST`를 넘깁니다.
 
 ```bash
 kinit -kt /cdep/keytabs/systest.keytab systest
@@ -98,7 +98,7 @@ export DATA_ROOT=/tmp/imei_synth
 ./run_kerberos.sh load /data/imei_synth
 ```
 
-`load`가 티켓을 다시 받고, Parquet를 HDFS `${DATA_ROOT}`에 올린 다음 `ipdr_db`와 `ipdr_rep` 테이블을 만들고 Iceberg에 적재합니다. 코디네이터가 TLS를 쓰면 `IMPALA_SSL=1`을 앞에 붙입니다.
+`load`가 티켓을 다시 받고, Parquet를 HDFS `${DATA_ROOT}`에 올린 다음 `ipdr_db`와 `ipdr_rep` 테이블을 만들고 Iceberg에 적재합니다. 접속은 `impala-shell -i ccycloud-2.sbimf-azure.root.comops.site -d default -k --ssl --ca_cert=/var/lib/cloudera-scm-agent/agent-cert/cm-auto-global_cacerts.pem`과 같습니다.
 
 이 적재는 랩 클러스터 전용입니다. 운영 데이터베이스에 실행하지 않습니다.
 
