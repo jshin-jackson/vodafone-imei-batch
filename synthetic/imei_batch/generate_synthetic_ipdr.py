@@ -49,7 +49,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
+import subprocess
 import sys
 import warnings
 from dataclasses import dataclass
@@ -249,7 +251,7 @@ def parse_args() -> argparse.Namespace:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
             "예시:\n"
-            "  python3 generate_synthetic_ipdr.py --output-dir /data/imei_synth\n"
+            "  python3 generate_synthetic_ipdr.py --output-dir /data/imei_synth --background\n"
             "  python3 generate_synthetic_ipdr.py --output-dir /data/imei_synth \\\n"
             "      --target-gib 3 --layout scattered\n"
             "  python3 generate_synthetic_ipdr.py --output-dir /data/imei_imei_sorted \\\n"
@@ -285,7 +287,46 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--row-group-mib", type=float, default=32.0)
     parser.add_argument("--seed-rows", type=int, default=8_000)
     parser.add_argument("--pool-rows", type=int, default=20_000)
+    parser.add_argument(
+        "--background",
+        action="store_true",
+        help=(
+            "Detach from the terminal. Writes <output-dir>.log and "
+            "<output-dir>.pid beside the output directory, then returns."
+        ),
+    )
     return parser.parse_args()
+
+
+def detach_if_requested(args: argparse.Namespace) -> None:
+    """Re-exec without a controlling terminal when --background is set."""
+    if not args.background or os.environ.get("IMEI_SYNTH_DETACHED") == "1":
+        return
+    output = args.output_dir
+    if output.exists():
+        raise SystemExit(f"Output directory already exists: {output}")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    log_path = output.parent / f"{output.name}.log"
+    pid_path = output.parent / f"{output.name}.pid"
+    command = [sys.executable, str(Path(__file__).resolve())]
+    command.extend(arg for arg in sys.argv[1:] if arg != "--background")
+    env = os.environ.copy()
+    env["IMEI_SYNTH_DETACHED"] = "1"
+    with log_path.open("ab", buffering=0) as log_file:
+        process = subprocess.Popen(
+            command,
+            stdin=subprocess.DEVNULL,
+            stdout=log_file,
+            stderr=subprocess.STDOUT,
+            env=env,
+            cwd=os.getcwd(),
+            start_new_session=True,
+        )
+    pid_path.write_text(f"{process.pid}\n", encoding="utf-8")
+    print(f"Background PID {process.pid}", flush=True)
+    print(f"Log: {log_path}", flush=True)
+    print(f"PID file: {pid_path}", flush=True)
+    raise SystemExit(0)
 
 
 def fit_gaussian(frame: pd.DataFrame, seed: int, label: str, table_name: str):
@@ -1144,6 +1185,7 @@ def save_model(synthesizer, metadata: Metadata, directory: Path, name: str) -> N
 
 def main() -> int:
     args = parse_args()
+    detach_if_requested(args)
     if args.background_imei_ndv < 10_000:
         raise SystemExit("--background-imei-ndv must be at least 10000")
     if args.max_files_per_day < 1:
