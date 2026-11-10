@@ -254,6 +254,11 @@ def parse_args() -> argparse.Namespace:
             "      --target-gib 3 --layout scattered\n"
             "  python3 generate_synthetic_ipdr.py --output-dir /data/imei_imei_sorted \\\n"
             "      --target-gib 3 --layout imei-sorted --seed 20261011\n"
+            "\n"
+            "ccycloud-1 은 Kerberos 가 켜져 있습니다. 생성 후 클러스터에서:\n"
+            "  ./run_kerberos.sh load /data/imei_synth\n"
+            "키탭 /cdep/keytabs/systest.keytab, principal systest\n"
+            "(systest@QE-INFRA-AD.CLOUDERA.COM).\n"
         ),
     )
     parser.add_argument("--output-dir", required=True, type=Path)

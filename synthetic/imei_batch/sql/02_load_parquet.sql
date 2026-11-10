@@ -1,12 +1,9 @@
 -- Load synthetic Parquet into the lab Iceberg tables.
--- 1. Copy the generator output to HDFS:
---      hdfs dfs -mkdir -p __DATA_ROOT__/ipdr_db/ipdr_cisco_oct_2026
---      hdfs dfs -mkdir -p __DATA_ROOT__/ipdr_rep/LGL_CGNAT_REQUEST_SPLIT_IMEI
---      hdfs dfs -put -f <output>/ipdr_db/ipdr_cisco_oct_2026/* \
---        __DATA_ROOT__/ipdr_db/ipdr_cisco_oct_2026/
---      hdfs dfs -put -f <output>/ipdr_rep/LGL_CGNAT_REQUEST_SPLIT_IMEI/* \
---        __DATA_ROOT__/ipdr_rep/LGL_CGNAT_REQUEST_SPLIT_IMEI/
--- 2. Replace every __DATA_ROOT__ below, then run this script.
+-- Kerberos is required. On ccycloud-1, run_kerberos.sh obtains
+-- systest@QE-INFRA-AD.CLOUDERA.COM from /cdep/keytabs/systest.keytab,
+-- copies the generator output to HDFS, and replaces __DATA_ROOT__:
+--   ./run_kerberos.sh load /data/imei_synth
+-- DATA_ROOT defaults to /tmp/imei_synth. Override it in the environment.
 --
 -- Timestamps are Parquet INT96 values so Impala keeps them as written.
 -- After the load, this check should stay on 2026-10-11 and must not shift by

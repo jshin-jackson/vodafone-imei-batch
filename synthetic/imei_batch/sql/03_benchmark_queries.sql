@@ -1,4 +1,5 @@
 -- Same batch statement as production, pointed at the synthetic tables.
+-- Run with a systest Kerberos ticket: ./run_kerberos.sh benchmark
 -- Snapshot clauses are omitted: the lab tables have their own snapshots.
 -- Default generator settings should return 8607 rows for the seven-day
 -- statement and the per-day counts in manifest.json for a one-day statement.

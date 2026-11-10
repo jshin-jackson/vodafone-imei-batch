@@ -1,6 +1,8 @@
 -- Lab schema for the IMEI batch benchmark.
 -- Database, table, and column names match production.
 -- Run this only on the internal lab cluster. Do not run it against production.
+-- Kerberos: systest@QE-INFRA-AD.CLOUDERA.COM via /cdep/keytabs/systest.keytab.
+--   ./run_kerberos.sh ddl
 --
 -- Iceberg SHOW PARTITIONS prints date_partition as days since 1970-01-01.
 -- 2026-10-11 is 20737. The values stored in the column are real DATE values.
